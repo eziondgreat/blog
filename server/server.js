@@ -5,34 +5,21 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ===== CORS CONFIGURATION =====
-// In development: allow localhost requests
-// In production (Render): restrict to deployed frontend URL
-// When custom domains are added, update allowedOrigins with the custom frontend domain
-const allowedOrigins = [
-  'http://localhost:3000',           // Local development
-  'http://localhost:5173',           // Vite dev server default port
-  'https://elizion-blog-frontend.onrender.com', // Render frontend deployment
-  // TODO: When adding custom domain, add it here:
-  // 'https://www.yourdomain.com',
-  // 'https://yourdomain.com',
-];
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (e.g., mobile apps, Postman, or same-server requests)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+// CORS Configuration - Allow all origins for now (debugging)
+// TODO: Restrict to specific origins in production
+app.use(cors({
+  origin: true, // Accept any origin
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true, // Allow cookies and authorization headers
-};
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
 
-app.use(cors(corsOptions));
+// Log CORS for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} from origin: ${req.get('origin')}`);
+  next();
+});
 
 // Parse JSON request bodies
 app.use(express.json());
