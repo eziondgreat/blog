@@ -1,6 +1,13 @@
 import { BlogPost, Comment, SystemConfig, HeroSlide } from './types';
 
+// Get API base URL from environment variable or use localhost as fallback
+// VITE_API_URL should be set in .env or via Render environment variables
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// Log the API URL being used (helpful for debugging in production)
+if (typeof window !== 'undefined') {
+  console.log(`[API] Using base URL: ${API_BASE_URL}`);
+}
 
 const getHeaders = (tokenRequired = false) => {
   const headers: Record<string, string> = {
