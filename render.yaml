@@ -30,4 +30,4 @@ services:
         value: public, max-age=0, must-revalidate
     envVars:
       - key: VITE_API_URL
-        value: https://elizion-backend.onrender.com/api # Replace with your actual backend Render URL
+        value: https://elizion-blog-backend-api.onrender.com/api # Replace with your actual backend Render URL
