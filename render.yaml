@@ -1,0 +1,33 @@
+services:
+  # 1. Express Backend Web Service
+  - type: web
+    name: elizion-backend
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+  # 2. Vite React Static Frontend Service
+  - type: web
+    name: elizion-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    publishDir: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    envVars:
+      - key: VITE_API_URL
+        value: https://elizion-backend.onrender.com/api # Replace with your actual backend Render URL
