@@ -29,5 +29,14 @@ services:
         name: Cache-Control
         value: public, max-age=0, must-revalidate
     envVars:
+      # CRITICAL: Set to your deployed backend URL with /api suffix
+      # Current value assumes backend service is named "elizion-backend"
+      # Example: https://elizion-blog-backend.onrender.com/api
+      # 
+      # CUSTOM DOMAIN MIGRATION:
+      # When you add a custom domain (e.g., www.yourdomain.com for frontend, api.yourdomain.com for backend):
+      # 1. Update this value to: https://api.yourdomain.com/api
+      # 2. Update server/server.js CORS allowedOrigins to include https://www.yourdomain.com
+      # 3. Update server/server.js CORS allowedOrigins to include https://yourdomain.com
       - key: VITE_API_URL
-        value: https://elizion-blog-backend-api.onrender.com # Replace with your actual backend Render URL
+        value: https://elizion-blog-backend.onrender.com/api
