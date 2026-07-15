@@ -1,1 +1,108 @@
-require('dotenv').config();\nconst express = require('express');\nconst cors = require('cors');\n\nconst app = express();\nconst PORT = process.env.PORT || 5000;\n\n// CORS Configuration - Allow all origins for now (debugging)\n// TODO: Restrict to specific origins in production\napp.use(cors({\n  origin: true, // Accept any origin\n  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],\n  allowedHeaders: ['Content-Type', 'Authorization'],\n  credentials: true,\n  optionsSuccessStatus: 200\n}));\n\n// Log all requests\napp.use((req, res, next) => {\n  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} from origin: ${req.get('origin')}`);\n  next();\n});\n\n// Parse JSON request bodies\napp.use(express.json());\n\n// Import Routes\nconst authRoutes = require('./routes/auth');\nconst configRoutes = require('./routes/config');\nconst slidesRoutes = require('./routes/slides');\nconst postsRoutes = require('./routes/posts');\nconst commentsRoutes = require('./routes/comments');\n\n// Mount Routes\napp.use('/api/auth', authRoutes);\napp.use('/api/config', configRoutes);\napp.use('/api/slides', slidesRoutes);\napp.use('/api/posts', postsRoutes);\napp.use('/api/comments', commentsRoutes);\n\n// Health check endpoint\napp.get('/api/health', (req, res) => {\n  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });\n});\n\n// Root endpoint (for health checks)\napp.get('/', (req, res) => {\n  res.status(200).json({ message: 'Backend API is running', port: PORT });\n});\n\n// 404 handler\napp.use((req, res) => {\n  console.warn(`[WARN] Route not found: ${req.method} ${req.path}`);\n  res.status(404).json({ error: 'Route not found', path: req.path });\n});\n\n// Error handler\napp.use((err, req, res, next) => {\n  console.error(`[ERROR] ${err.message}`, err);\n  res.status(500).json({ error: err.message || 'Internal server error' });\n});\n\n// Self-Keep-Alive Pinger (Prevents Render spin-down & Supabase pause)\nconst { supabase } = require('./db');\nfunction startKeepAlive() {\n  const externalUrl = process.env.RENDER_EXTERNAL_URL;\n  if (!externalUrl) {\n    console.log('Keep-alive: RENDER_EXTERNAL_URL not set. Skipping keep-alive pinger (local development).');\n    return;\n  }\n\n  console.log(`Keep-alive: Initializing pinger for URL: ${externalUrl}`);\n\n  // Ping every 14 minutes (Render free tier spins down after 15 minutes of inactivity)\n  const PING_INTERVAL = 14 * 60 * 1000;\n\n  setInterval(async () => {\n    try {\n      console.log(`[Keep-Alive] Pinging self at ${externalUrl}/api/health...`);\n      const response = await fetch(`${externalUrl}/api/health`);\n      if (response.ok) {\n        console.log(`[Keep-Alive] Self-ping successful.`);\n      } else {\n        console.warn(`[Keep-Alive] Self-ping returned status: ${response.status}`);\n      }\n\n      // Query Supabase to keep it from pausing (requires activity at least once a week)\n      console.log(`[Keep-Alive] Pinging Supabase...`);\n      const { error } = await supabase.from('system_config').select('id').eq('id', 1).single();\n      if (error) {\n        console.error(`[Keep-Alive] Supabase ping failed:`, error.message);\n      } else {\n        console.log(`[Keep-Alive] Supabase ping successful.`);\n      }\n    } catch (err) {\n      console.error(`[Keep-Alive] Error in keep-alive loop:`, err.message || err);\n    }\n  }, PING_INTERVAL);\n}\n\n// Start keep-alive\nstartKeepAlive();\n\n// Start the server\napp.listen(PORT, '0.0.0.0', () => {\n  console.log(`Server is running on port ${PORT}`);\n  console.log(`Backend API ready at http://localhost:${PORT}/api`);\n});\n
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// CORS Configuration - Allow all origins for now (debugging)
+// TODO: Restrict to specific origins in production
+app.use(cors({
+  origin: true, // Accept any origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+}));
+
+// Log all requests
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} from origin: ${req.get('origin')}`);
+  next();
+});
+
+// Parse JSON request bodies
+app.use(express.json());
+
+// Import Routes
+const authRoutes = require('./routes/auth');
+const configRoutes = require('./routes/config');
+const slidesRoutes = require('./routes/slides');
+const postsRoutes = require('./routes/posts');
+const commentsRoutes = require('./routes/comments');
+
+// Mount Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/slides', slidesRoutes);
+app.use('/api/posts', postsRoutes);
+app.use('/api/comments', commentsRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Root endpoint (for health checks)
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Backend API is running', port: PORT });
+});
+
+// 404 handler
+app.use((req, res) => {
+  console.warn(`[WARN] Route not found: ${req.method} ${req.path}`);
+  res.status(404).json({ error: 'Route not found', path: req.path });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+  console.error(`[ERROR] ${err.message}`, err);
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
+
+// Self-Keep-Alive Pinger (Prevents Render spin-down & Supabase pause)
+const { supabase } = require('./db');
+function startKeepAlive() {
+  const externalUrl = process.env.RENDER_EXTERNAL_URL;
+  if (!externalUrl) {
+    console.log('Keep-alive: RENDER_EXTERNAL_URL not set. Skipping keep-alive pinger (local development).');
+    return;
+  }
+
+  console.log(`Keep-alive: Initializing pinger for URL: ${externalUrl}`);
+
+  // Ping every 14 minutes (Render free tier spins down after 15 minutes of inactivity)
+  const PING_INTERVAL = 14 * 60 * 1000;
+
+  setInterval(async () => {
+    try {
+      console.log(`[Keep-Alive] Pinging self at ${externalUrl}/api/health...`);
+      const response = await fetch(`${externalUrl}/api/health`);
+      if (response.ok) {
+        console.log(`[Keep-Alive] Self-ping successful.`);
+      } else {
+        console.warn(`[Keep-Alive] Self-ping returned status: ${response.status}`);
+      }
+
+      // Query Supabase to keep it from pausing (requires activity at least once a week)
+      console.log(`[Keep-Alive] Pinging Supabase...`);
+      const { error } = await supabase.from('system_config').select('id').eq('id', 1).single();
+      if (error) {
+        console.error(`[Keep-Alive] Supabase ping failed:`, error.message);
+      } else {
+        console.log(`[Keep-Alive] Supabase ping successful.`);
+      }
+    } catch (err) {
+      console.error(`[Keep-Alive] Error in keep-alive loop:`, err.message || err);
+    }
+  }, PING_INTERVAL);
+}
+
+// Start keep-alive
+startKeepAlive();
+
+// Start the server
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`Backend API ready at http://localhost:${PORT}/api`);
+});
